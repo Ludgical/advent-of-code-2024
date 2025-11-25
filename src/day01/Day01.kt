@@ -1,17 +1,19 @@
+package day01
+
 import java.io.File
 import kotlin.math.abs
 
 fun main() {
-    val input = input("01input")
+    val input = input("01", "input")
     println(part1(input[0], input[1]))
     println(part2(input[0], input[1]))
 }
 
-fun input(path: String): Array<MutableList<Int>> {
-    val input = File("src/$path.txt").readLines()
+fun input(day: String, type: String): Array<MutableList<Int>> {
+    val input = File("src/day$day/$type.txt").readLines()
     val lists = Array(2) { mutableListOf<Int>() }
-    for(string in input) {
-        val nums = string.split("   ")
+    for(line in input) {
+        val nums = line.split("   ")
         lists[0].add(nums[0].toInt())
         lists[1].add(nums[1].toInt())
     }

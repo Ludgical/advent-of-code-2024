@@ -31,4 +31,6 @@ bin/
 ### Mac OS ###
 .DS_Store
 
-src/*.txt
+src/*/*.txt
+Advent of Code Test.iml
+.idea
