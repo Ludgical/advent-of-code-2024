@@ -71,17 +71,18 @@ fun part2(machines: Array<Machine>): Long {
     for (machine in machines) {
         //Using ChatGPT and Cramer's rule
 
-        val (p, q) = machine.aIncrement
-        val (r, s) = machine.bIncrement
+        //swapped r and q because I understand Cramer's rule now
+        val (p, r) = machine.aIncrement
+        val (q, s) = machine.bIncrement
         val (n, m) = machine.prize
 
-        val d = p * s - q * r
+        val d = p * s - r * q
 
         if (d == 0)
             throw IllegalArgumentException("d == 0")
 
-        val aNum = n * s - r * m
-        val bNum = p * m - n * q
+        val aNum = n * s - q * m
+        val bNum = p * m - n * r
 
         if (aNum % d != 0L || bNum % d != 0L)
             continue
