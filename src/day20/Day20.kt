@@ -134,6 +134,10 @@ fun part1(maze: LongArray, size: Int, start: Location, end: Location): Int {
 
 fun part2(maze: LongArray, size: Int, start: Location, end: Location): Int {
     val solution = getSolution(maze, size, start, end)
+    //HashMap makes it a lot faster
+    val locationIndices = HashMap<Pair<Int, Int>, Int>()
+    for (index in solution.indices)
+        locationIndices[solution[index]] = index
 
     var sum = 0
 
@@ -159,12 +163,8 @@ fun part2(maze: LongArray, size: Int, start: Location, end: Location): Int {
                     continue
 
                 //Get the indices of the start and end of the cheat in the solution
-                val startIndex = solution.indexOf(Pair(startX, startY))
-                if (startIndex == -1)
-                    continue
-                val endIndex = solution.indexOf(Pair(endX, endY))
-                if (endIndex == -1)
-                    continue
+                val startIndex = locationIndices[Pair(startX, startY)] ?: continue
+                val endIndex = locationIndices[Pair(endX, endY)] ?: continue
 
                 //The distance from the start of the cheat to the end of the cheat following the solution
                 //is the saved time, and the Manhattan distance between the start and end of the cheat
