@@ -2,8 +2,10 @@ package day24
 
 import java.io.File
 
-data class Wire(val name: String, var value: Boolean?, var input: Gate? = null)
-data class Gate(val output: Wire, val input1: Wire, val input2: Wire, val type: Char)
+data class Wire(var name: String, var value: Boolean?, var input: Gate? = null)
+data class Gate(val output: Wire, val input1: Wire, val input2: Wire, val type: Char) {
+    override fun toString() = "${input1.name} $type ${input2.name} -> ${output.name}"
+}
 
 fun score(wire: Wire): Int {
     val score = when (wire.name[0]) {
@@ -37,10 +39,7 @@ fun main() {
         gate
     }
 
-    val part1 = part1(wires)
-    println(part1)
-    //The error is where it stops printing ones
-    println(binary(part1))
+    println(part1(wires))
     println(part2(gates))
 }
 
@@ -80,52 +79,85 @@ fun part1(wires: Map<String, Wire>): Long {
 }
 
 fun part2(gates: List<Gate>): String {
-    // I printed the gates and found where the pattern broke and got help from the python files
+    // Sort gates so that it goes x-bits, y-bits, z-bits, rest sorted alphabetically
+    val sorted = gates.toList().sortedBy { score(it.input1) + score(it.input2).toDouble() }.toMutableList()
 
-    val outputs = mutableMapOf<Pair<String, String>, MutableSet<String>>()
-    for (gate in gates)
-        outputs.getOrPut(Pair(gate.input1.name, gate.input2.name)) { mutableSetOf() }.add(gate.output.name)
-
-    val sorted = gates.toList().sortedBy {
-        var score = score(it.input1) + score(it.input2).toDouble()
-        score += when (it.type) {
-            'X' -> 0.0
-            'A' -> 0.1
-            else -> 0.2
-        }
-        score
-    }.toMutableList()
-
+    // Put the gates in the order they would execute (naturally puts the gates in groups)
     val ordered = mutableListOf<Gate>()
     fun addGate(gate: Gate) {
-        if (ordered.count { gate.output.name == it.output.name } == 0) {
-            ordered.add(gate)
-            for (nextGate in sorted) {
-                if (nextGate.input1.name == gate.output.name) {
-                    if (ordered.count { nextGate.input2.name == it.output.name } != 0)
-                        addGate(nextGate)
-                }
-                else if (nextGate.input2.name == gate.output.name) {
-                    if (ordered.count { nextGate.input1.name == it.output.name } != 0)
-                        addGate(nextGate)
-                }
+        if (ordered.count { gate.output.name == it.output.name } != 0)
+            return
+
+        ordered.add(gate)
+        for (nextGate in sorted) {
+            if (nextGate.input1.name == gate.output.name) {
+                if (ordered.count { nextGate.input2.name == it.output.name } != 0)
+                    addGate(nextGate)
+            }
+            else if (nextGate.input2.name == gate.output.name) {
+                if (ordered.count { nextGate.input1.name == it.output.name } != 0)
+                    addGate(nextGate)
             }
         }
+
     }
 
     for (gate in sorted)
         addGate(gate)
 
-    return ordered.joinToString("\n") { "${if (it.input1.name[0] == 'x' && it.type == 'X') '\n' else ""}" +
-            "${it.input1.name} ${it.type} ${it.input2.name} -> ${it.output.name}" }
-}
+    val swapped = mutableSetOf<String>()
 
-fun binary(num: Long): String {
-    var highestBit = num.takeHighestOneBit()
-    var str = ""
-    while (highestBit != 0L) {
-        str += if ((num and highestBit) == 0L) '0' else '1'
-        highestBit = highestBit shr 1
+    // I assume the first 2 lines are always correct and that the swaps only happen within a single group or in the carry
+    // Should be:
+    // x00 X y00 -> z00
+    // x00 A y00 -> carry
+    // Repeat:
+    // xn X yn -> a
+    // a X carry -> zn
+    // a A carry -> b
+    // xn A yn -> c
+    // b O c -> carry
+
+    var carry = ordered[1].output.name
+
+    for (n in 1 until ordered.maxOf { it.output.name.takeLast(2).toIntOrNull()?: -1 }) {
+        // Sort gates withing the group (all the groups should have the same structure)
+        val group = Array(5) { i ->
+            ordered[(5 * n) - 3 + i] }.sortedBy {
+                when (it.type) {
+                    'X' -> 0
+                    'A' -> 1 shl 24
+                    else -> 2 shl 24
+                } + score(it.input1) + score(it.input2)
+            }
+
+        // Check if every output goes to the inputs it should go to, if it does not, add the output the swapped
+
+        var gate = group[0]
+        val a = gate.output.name
+
+        gate = group[1]
+        if (gate.input1.name != a && gate.input2.name != a)
+            swapped.add(a)
+        if (gate.input1.name != carry && gate.input2.name != carry)
+            swapped.add(carry)
+        if (gate.output.name[0] != 'z')
+            swapped.add(gate.output.name)
+
+        gate = group[2]
+        // a and carry would've gotten caught in the previous gate
+        val b = gate.output.name
+
+        gate = group[3]
+        val c = gate.output.name
+
+        gate = group[4]
+        if (gate.input1.name != b && gate.input2.name != b)
+            swapped.add(b)
+        if (gate.input1.name != c && gate.input2.name != c)
+            swapped.add(c)
+        carry = gate.output.name
     }
-    return str.ifEmpty { "0" }
+
+    return swapped.sortedBy { it.hashCode() }.joinToString(",")
 }
